@@ -1,17 +1,38 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import todoReducer from './store/todoSlice';
+
+function renderWithProviders(component: React.ReactElement) {
+  const store = configureStore({
+    reducer: {
+      todos: todoReducer
+    },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: false
+      })
+  });
+
+  return render(
+    <Provider store={store}>
+      {component}
+    </Provider>
+  );
+}
 
 describe('Тесты приложения', () => {
   test('отображает заголовок', () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const titleElement = screen.getByText(/Задачи/i);
     expect(titleElement).toBeInTheDocument();
   });
 
   test('добавляет новую задачу', async () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const input = screen.getByPlaceholderText(/Что нужно сделать?/i);
     
     await userEvent.type(input, 'Новая задача');
@@ -22,7 +43,7 @@ describe('Тесты приложения', () => {
   });
 
   test('переключает статус выполнения', async () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const input = screen.getByPlaceholderText(/Что нужно сделать?/i);
     
     await userEvent.type(input, 'Тестовая задача');
@@ -39,7 +60,7 @@ describe('Тесты приложения', () => {
   });
 
   test('удаляет задачу', async () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const input = screen.getByPlaceholderText(/Что нужно сделать?/i);
     
     await userEvent.type(input, 'Задача для удаления');
@@ -54,7 +75,7 @@ describe('Тесты приложения', () => {
   });
 
   test('фильтрует задачи по статусу', async () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const input = screen.getByPlaceholderText(/Что нужно сделать?/i);
     
     await userEvent.type(input, 'Активная задача');
@@ -63,7 +84,7 @@ describe('Тесты приложения', () => {
     await userEvent.type(input, 'Выполненная задача');
     fireEvent.keyPress(input, { key: 'Enter', code: 'Enter', charCode: 13 });
     
-    const completedCheckbox = screen.getAllByRole('checkbox')[1];
+    const completedCheckbox = screen.getAllByRole('checkbox')[0];
     await userEvent.click(completedCheckbox);
     
     const activeFilter = screen.getByText('Активные');
@@ -83,7 +104,7 @@ describe('Тесты приложения', () => {
   });
 
   test('показывает количество активных задач', async () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const input = screen.getByPlaceholderText(/Что нужно сделать?/i);
     
     expect(screen.getByText('Осталось: 0')).toBeInTheDocument();
@@ -102,7 +123,7 @@ describe('Тесты приложения', () => {
   });
 
   test('очищает выполненные задачи', async () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const input = screen.getByPlaceholderText(/Что нужно сделать?/i);
     
     await userEvent.type(input, 'Задача 1');
@@ -115,22 +136,22 @@ describe('Тесты приложения', () => {
     fireEvent.keyPress(input, { key: 'Enter', code: 'Enter', charCode: 13 });
     
     const checkboxes = screen.getAllByRole('checkbox');
-    const checkbox1 = checkboxes[0];
+    const checkbox3 = checkboxes[0];
     const checkbox2 = checkboxes[1];
     
-    await userEvent.click(checkbox1);
+    await userEvent.click(checkbox3);
     await userEvent.click(checkbox2);
     
     const clearButton = screen.getByText('Очистить выполненные');
     await userEvent.click(clearButton);
     
-    expect(screen.queryByText('Задача 1')).not.toBeInTheDocument();
+    expect(screen.queryByText('Задача 3')).not.toBeInTheDocument();
     expect(screen.queryByText('Задача 2')).not.toBeInTheDocument();
-    expect(screen.getByText('Задача 3')).toBeInTheDocument();
+    expect(screen.getByText('Задача 1')).toBeInTheDocument();
   });
 
   test('не добавляет пустые задачи', async () => {
-    render(<App />);
+    renderWithProviders(<App />);
     const input = screen.getByPlaceholderText(/Что нужно сделать?/i);
     
     await userEvent.type(input, '   ');
